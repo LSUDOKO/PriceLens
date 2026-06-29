@@ -1,0 +1,123 @@
+# PriceLens DynamoDB Infrastructure
+# Deploy with: aws cloudformation deploy --template-file infra/dynamodb-template.yaml --stack-name pricelens-dynamodb --capabilities CAPABILITY_IAM
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "PriceLens — DynamoDB tables for cross-region price intelligence"
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [development, staging, production]
+  ProductsTableName:
+    Type: String
+    Default: pricelens-products
+  PricesTableName:
+    Type: String
+    Default: pricelens-prices
+  AlertsTableName:
+    Type: String
+    Default: pricelens-alerts
+
+Resources:
+  # ─── Products Table ─────────────────────────────────────
+  ProductsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref ProductsTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sku
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sku
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: category-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: application
+          Value: pricelens
+        - Key: environment
+          Value: !Ref Environment
+
+  # ─── Prices Table ───────────────────────────────────────
+  PricesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref PricesTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sku
+          AttributeType: S
+        - AttributeName: region
+          AttributeType: S
+        - AttributeName: pricePerUnit
+          AttributeType: N
+      KeySchema:
+        - AttributeName: sku
+          KeyType: HASH
+        - AttributeName: region
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: source-index
+          KeySchema:
+            - AttributeName: region
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      LocalSecondaryIndexes:
+        - IndexName: price-index
+          KeySchema:
+            - AttributeName: sku
+              KeyType: HASH
+            - AttributeName: pricePerUnit
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: application
+          Value: pricelens
+        - Key: environment
+          Value: !Ref Environment
+
+  # ─── Alerts Table ───────────────────────────────────────
+  AlertsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref AlertsTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: alertId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: alertId
+          KeyType: RANGE
+      Tags:
+        - Key: application
+          Value: pricelens
+        - Key: environment
+          Value: !Ref Environment
+
+Outputs:
+  ProductsTableArn:
+    Description: Products Table ARN
+    Value: !GetAtt ProductsTable.Arn
+  PricesTableArn:
+    Description: Prices Table ARN
+    Value: !GetAtt PricesTable.Arn
+  AlertsTableArn:
+    Description: Alerts Table ARN
+    Value: !GetAtt AlertsTable.Arn

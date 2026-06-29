@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PriceLens — Architecture Diagram</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #e4e4e7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    h1 { font-size: 28px; margin-bottom: 8px; background: linear-gradient(135deg, #818cf8, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #a1a1aa; font-size: 14px; margin-bottom: 40px; }
+    
+    .diagram {
+      max-width: 1000px;
+      width: 100%;
+      position: relative;
+    }
+
+    .layer-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #52525b;
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    .box {
+      border: 1.5px solid #27272a;
+      border-radius: 12px;
+      padding: 16px;
+      background: #18181b;
+      transition: all 0.2s;
+    }
+    .box:hover { border-color: #52525b; }
+    .box.highlight { border-color: #818cf8; background: #1e1e2a; }
+    .box.highlight-green { border-color: #22c55e; background: #1a2a1e; }
+    .box-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .box-icon { font-size: 16px; }
+    .box-desc { font-size: 11px; color: #a1a1aa; line-height: 1.5; }
+    .tag {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #27272a;
+      color: #a1a1aa;
+      margin-top: 6px;
+    }
+    .tag.primary { background: #818cf820; color: #818cf8; }
+    .tag.green { background: #22c55e20; color: #22c55e; }
+    .tag.orange { background: #f59e0b20; color: #f59e0b; }
+
+    .layer { margin-bottom: 32px; }
+
+    .client-layer { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .client-layer .box { flex: 1; min-width: 200px; max-width: 280px; }
+
+    .mcp-layer { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .mcp-layer .box { flex: 1; max-width: 500px; min-width: 280px; }
+
+    .db-layer { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .db-layer .box { flex: 1; min-width: 200px; max-width: 300px; }
+
+    .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
+    .tool-item { font-size: 10px; padding: 3px 6px; background: #27272a; border-radius: 4px; color: #a1a1aa; }
+
+    .connector { display: flex; justify-content: center; padding: 8px 0; color: #52525b; font-size: 12px; }
+    .arrow-down { text-align: center; color: #52525b; font-size: 18px; margin: 4px 0; }
+
+    .db-schema { margin-top: 48px; width: 100%; }
+    .schema-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .schema-table { border: 1.5px solid #27272a; border-radius: 10px; overflow: hidden; }
+    .schema-table h3 { font-size: 12px; padding: 8px 12px; background: #1e1e2a; border-bottom: 1px solid #27272a; }
+    .schema-table table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .schema-table th, .schema-table td { padding: 4px 12px; text-align: left; border-bottom: 1px solid #1a1a1f; }
+    .schema-table th { color: #818cf8; font-weight: 600; background: #1a1a1f; }
+    .schema-table td { color: #a1a1aa; }
+    .key { color: #22c55e; font-weight: 600; }
+
+    .footer { margin-top: 48px; text-align: center; font-size: 12px; color: #52525b; line-height: 1.8; }
+    .footer strong { color: #a1a1aa; }
+
+    @media (max-width: 640px) {
+      .client-layer, .db-layer { flex-direction: column; align-items: center; }
+      .client-layer .box, .db-layer .box { max-width: 100%; }
+      .mcp-layer .box { max-width: 100%; }
+      .tools-grid { grid-template-columns: repeat(2, 1fr); }
+      .schema-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🏗️ PriceLens Architecture</h1>
+  <p class="subtitle">H0 Hackathon — Track 2: Monetizable B2B App · Amazon DynamoDB + Next.js 16.2 + MCP</p>
+
+  <div class="diagram">
+    <!-- Client Layer -->
+    <div class="layer">
+      <div class="layer-label">📱 Client Layer</div>
+      <div class="client-layer">
+        <div class="box highlight">
+          <div class="box-title"><span class="box-icon">🤖</span> Claude Desktop</div>
+          <div class="box-desc">Chat interface with MCP-native tools. Users ask "What's the best price for a MacBook Pro?" or "Compare flight prices to London" and get structured pricing answers from all sources.</div>
+          <div class="tag primary">MCP Client</div>
+        </div>
+        <div class="box highlight">
+          <div class="box-title"><span class="box-icon">🌐</span> Web Browser</div>
+          <div class="box-desc">Next.js dashboard with Price Explorer, Source Comparison, and Alerts management. Deployed on Vercel.</div>
+          <div class="tag primary">Vercel</div>
+        </div>
+        <div class="box">
+          <div class="box-title"><span class="box-icon">💻</span> Cursor / Cline</div>
+          <div class="box-desc">Any MCP-compatible IDE can connect to PriceLens for inline price lookup during development or research.</div>
+          <div class="tag">MCP Client</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down">↓</div>
+    <div class="connector">stdio (JSON-RPC 2.0) &nbsp;|&nbsp; HTTP (REST)</div>
+    <div class="arrow-down">↓</div>
+
+    <!-- MCP Layer -->
+    <div class="layer">
+      <div class="layer-label">🧠 MCP Server + API Layer</div>
+      <div class="mcp-layer">
+        <div class="box highlight">
+          <div class="box-title"><span class="box-icon">🔧</span> MCP Server (src/lib/mcp-server.ts)</div>
+          <div class="box-desc">9 Tools + 3 Resources. Communicates via stdio using JSON-RPC 2.0. Auto-seeds data on startup.</div>
+          <div class="tools-grid">
+            <div class="tool-item">search_prices</div>
+            <div class="tool-item">compare_sources</div>
+            <div class="tool-item">find_best_price</div>
+            <div class="tool-item">list_categories</div>
+            <div class="tool-item">list_products_by_category</div>
+            <div class="tool-item">set_price_alert</div>
+            <div class="tool-item">list_alerts</div>
+            <div class="tool-item">delete_alert</div>
+            <div class="tool-item">get_source_overview</div>
+          </div>
+          <div class="tag primary">@modelcontextprotocol/sdk</div>
+        </div>
+        <div class="box highlight">
+          <div class="box-title"><span class="box-icon">⚡</span> Next.js API Routes</div>
+          <div class="box-desc">REST endpoints: /api/prices, /api/alerts, /api/seed, /api/health. Built on the same db-adapter layer as the MCP server.</div>
+          <div class="tag primary">Next.js 16.2</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down">↓</div>
+    <div class="connector">Database Adapter (auto-detects DynamoDB or falls back to in-memory)</div>
+    <div class="arrow-down">↓</div>
+
+    <!-- Data Layer -->
+    <div class="layer">
+      <div class="layer-label">💾 Data Layer</div>
+      <div class="db-layer">
+        <div class="box highlight-green">
+          <div class="box-title"><span class="box-icon">🗄️</span> Amazon DynamoDB</div>
+          <div class="box-desc">Production storage. On-Demand capacity, auto-scaling. 3 tables with GSIs for source-based queries.</div>
+          <div class="tag green">PAY_PER_REQUEST</div>
+        </div>
+        <div class="box">
+          <div class="box-title"><span class="box-icon">🧠</span> In-Memory Store</div>
+          <div class="box-desc">Zero-setup fallback. Auto-seeded with 14 products × 14 sources = 60+ price points. Data resets on restart.</div>
+          <div class="tag orange">Development</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DB Schema -->
+    <div class="db-schema">
+      <div class="layer-label">📊 DynamoDB Schema (3 Tables)</div>
+      <div class="schema-grid">
+        <div class="schema-table">
+          <h3>🟢 Products</h3>
+          <table>
+            <tr><th>Key</th><th>Type</th><th>Attr</th></tr>
+            <tr><td class="key">sku (PK)</td><td>String</td><td>HASH</td></tr>
+            <tr><td>name</td><td>String</td><td>-</td></tr>
+            <tr><td>category</td><td>String</td><td>GSI PK</td></tr>
+            <tr><td>tags</td><td>String[]</td><td>-</td></tr>
+            <tr><td>baseSpecs</td><td>Map</td><td>-</td></tr>
+          </table>
+        </div>
+        <div class="schema-table">
+          <h3>🔵 Prices</h3>
+          <table>
+            <tr><th>Key</th><th>Type</th><th>Attr</th></tr>
+            <tr><td class="key">sku (PK)</td><td>String</td><td>HASH</td></tr>
+            <tr><td class="key">source (SK)</td><td>String</td><td>RANGE</td></tr>
+            <tr><td>pricePerUnit</td><td>Number</td><td>-</td></tr>
+            <tr><td>currency</td><td>String</td><td>-</td></tr>
+            <tr><td>sourceType</td><td>String</td><td>-</td></tr>
+          </table>
+        </div>
+        <div class="schema-table">
+          <h3>🟠 Alerts</h3>
+          <table>
+            <tr><th>Key</th><th>Type</th><th>Attr</th></tr>
+            <tr><td class="key">userId (PK)</td><td>String</td><td>HASH</td></tr>
+            <tr><td class="key">alertId (SK)</td><td>String</td><td>RANGE</td></tr>
+            <tr><td>sku</td><td>String</td><td>-</td></tr>
+            <tr><td>targetSource</td><td>String</td><td>-</td></tr>
+            <tr><td>targetPrice</td><td>Number</td><td>-</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Flow -->
+    <div style="margin-top: 48px;">
+      <div class="layer-label">🔄 Data Flow</div>
+      <div class="box" style="padding: 20px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start;">
+          <div style="min-width: 120px; flex: 1;">
+            <div style="font-size: 11px; font-weight: 600; color: #818cf8; margin-bottom: 8px;">MCP Query Flow</div>
+            <div style="font-size: 11px; color: #a1a1aa; line-height: 2;">
+              User: "Find cheapest for MacBook Pro"<br>
+              → Claude formats MCP tool call<br>
+              → JSON-RPC over stdio<br>
+              → MCP Server compares sources<br>
+              → db-adapter queries store<br>
+              → Cheapest source returned
+            </div>
+          </div>
+          <div style="min-width: 120px; flex: 1;">
+            <div style="font-size: 11px; font-weight: 600; color: #22c55e; margin-bottom: 8px;">Web Query Flow</div>
+            <div style="font-size: 11px; color: #a1a1aa; line-height: 2;">
+              User visits /heatmap (Source Comparison)<br>
+              → fetch(/api/prices?type=all)<br>
+              → API Route handler queries db-adapter<br>
+              → Returns products + source prices<br>
+              → Browser renders comparison chart
+            </div>
+          </div>
+          <div style="min-width: 120px; flex: 1;">
+            <div style="font-size: 11px; font-weight: 600; color: #f59e0b; margin-bottom: 8px;">Alert Flow</div>
+            <div style="font-size: 11px; color: #a1a1aa; line-height: 2;">
+              User sets alert via UI or MCP tool<br>
+              → POST /api/alerts stores in db-adapter<br>
+              → Alert saved to DynamoDB or memory<br>
+              → Appears in alerts dashboard<br>
+              → Queryable via MCP list_alerts tool
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supported Sources -->
+    <div style="margin-top: 48px;">
+      <div class="layer-label">🏪 Supported Sources (14)</div>
+      <div class="box" style="padding: 16px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;">
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🛒 Shopee SG</strong> <span style="color:#52525b;">merchant</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🛍️ Lazada SG</strong> <span style="color:#52525b;">merchant</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>📦 Amazon SG</strong> <span style="color:#52525b;">merchant</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🇺🇸 Amazon US</strong> <span style="color:#52525b;">merchant</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>💻 Best Buy US</strong> <span style="color:#52525b;">merchant</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>✈️ Google Flights</strong> <span style="color:#52525b;">airline</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🇸🇬 Singapore Airlines</strong> <span style="color:#52525b;">airline</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🇦🇪 Emirates</strong> <span style="color:#52525b;">airline</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🏨 Booking.com</strong> <span style="color:#52525b;">booking</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🏠 Agoda</strong> <span style="color:#52525b;">booking</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🌐 Expedia</strong> <span style="color:#52525b;">booking</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🎫 Ticketmaster</strong> <span style="color:#52525b;">exchange</span></div>
+          <div style="font-size: 11px; color: #a1a1aa;"><strong>🎟️ Viator</strong> <span style="color:#52525b;">exchange</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <strong>PriceLens</strong> · Built for <strong>H0 Hackathon</strong> · AWS DynamoDB + Next.js 16.2 + MCP <br>
+    <span style="font-size: 11px;">June 2026 · Track 2: Monetizable B2B App</span>
+  </div>
+</body>
+</html>
