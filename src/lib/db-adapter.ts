@@ -7,6 +7,8 @@
  */
 
 import { memoryStore } from "./memory-store";
+import { fetchLivePrices, getConfiguredSourcesCount, getLiveCapableSources } from "./sources";
+import type { LivePriceResult } from "./sources";
 
 let useDynamoDB: boolean | null = null;
 let dynamoModule: typeof import("./dynamodb") | null = null;
@@ -115,6 +117,15 @@ export async function putProduct(product: Record<string, unknown>) {
   else memoryStore.putProduct(product as any);
 }
 
+// ─── Live API Sources ─────────────────────────────────────────
+
+export function getLiveSourcesInfo() {
+  return {
+    count: getConfiguredSourcesCount(),
+    sources: getLiveCapableSources(),
+  };
+}
+
 // ─── Prices API ───────────────────────────────────────────────
 
 export async function getPrices(sku: string) {
@@ -133,6 +144,151 @@ export async function getPricesBySource(source: string) {
   const db = await getDB();
   if (db) return db.getPricesBySource(source);
   return memoryStore.getPricesBySource(source);
+}
+
+/**
+ * Get merged prices — seed/memory data enriched with live API results.
+ * Live results override seed data for the same source.
+ * Results include a `live` boolean flag.
+ */
+export async function getMergedPrices(sku: string): Promise<Record<string, unknown>[]> {
+  // Fetch seed and live in parallel
+  const [seedPrices, livePrices] = await Promise.all([
+    getPrices(sku),
+    fetchLivePrices(sku),
+  ]);
+
+  if (livePrices.length === 0) {
+    return seedPrices;
+  }
+
+  // Build map: source → live price
+  const liveBySource = new Map<string, LivePriceResult>();
+  for (const lp of livePrices) {
+    liveBySource.set(lp.source, lp);
+  }
+
+  // Merge: live overrides seed for same source; preserve seed sources not in live
+  const seenSources = new Set<string>();
+  const merged: Record<string, unknown>[] = [];
+
+  for (const sp of seedPrices) {
+    const source = sp.source as string;
+    seenSources.add(source);
+    const live = liveBySource.get(source);
+    if (live) {
+      merged.push({
+        ...sp,
+        pricePerUnit: live.pricePerUnit,
+        currency: live.currency,
+        timestamp: live.timestamp,
+        live: true,
+        liveDetail: live.detail,
+        liveUrl: live.url,
+      });
+    } else {
+      merged.push({ ...sp, live: false });
+    }
+  }
+
+  // Add any live-only sources (new sources not in seed data)
+  for (const lp of livePrices) {
+    if (!seenSources.has(lp.source)) {
+      merged.push({
+        sku: lp.sku,
+        source: lp.source,
+        sourceType: lp.sourceType,
+        pricePerUnit: lp.pricePerUnit,
+        currency: lp.currency,
+        unit: lp.unit,
+        timestamp: lp.timestamp,
+        live: true,
+        liveDetail: lp.detail,
+        liveUrl: lp.url,
+      });
+    }
+  }
+
+  return merged;
+}
+
+/**
+ * Get merged prices for all products — used for the main explorer view.
+ * Fetches seed prices for all products, then enriches with live data.
+ */
+export async function getMergedAllPrices(): Promise<{
+  products: { product: Record<string, unknown>; prices: Record<string, unknown>[] }[];
+  sources: Record<string, unknown>[];
+  liveSourceCount: number;
+  liveSources: string[];
+}> {
+  const [allPrices, allProducts] = await Promise.all([
+    scanAllPrices(),
+    getAllProducts(),
+  ]);
+
+  // Group prices by SKU
+  const grouped: Record<string, Record<string, unknown>[]> = {};
+  for (const p of allPrices) {
+    const key = String(p.sku || "");
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(p);
+  }
+
+  // Enrich each product with live prices
+  const results = allProducts.map((prod) => ({
+    product: prod,
+    prices: grouped[prod.sku as string] || [],
+  }));
+
+  // Fetch live prices for all products in parallel
+  const uniqueSkus = [...new Set(allProducts.map(p => p.sku as string))];
+  const liveResults = await Promise.all(
+    uniqueSkus.map(sku => fetchLivePrices(sku))
+  );
+
+  // Merge live into results
+  for (let i = 0; i < results.length; i++) {
+    const sku = results[i].product.sku as string;
+    const skuIndex = uniqueSkus.indexOf(sku);
+    const livePrices = skuIndex >= 0 ? liveResults[skuIndex] : [];
+
+    if (livePrices.length > 0) {
+      const merged = new Map<string, Record<string, unknown>>();
+      
+      // Existing seed prices (marked as not live)
+      for (const p of results[i].prices) {
+        merged.set(p.source as string, { ...p, live: false });
+      }
+
+      // Live prices override
+      for (const lp of livePrices) {
+        merged.set(lp.source, {
+          sku: lp.sku,
+          source: lp.source,
+          sourceType: lp.sourceType,
+          pricePerUnit: lp.pricePerUnit,
+          currency: lp.currency,
+          unit: lp.unit,
+          timestamp: lp.timestamp,
+          live: true,
+          liveDetail: lp.detail,
+          liveUrl: lp.url,
+        });
+      }
+
+      results[i].prices = Array.from(merged.values());
+    }
+  }
+
+  const { PRICE_SOURCES: sourceInfos } = await import("./types");
+
+  return {
+    products: results,
+    sources: sourceInfos as unknown as Record<string, unknown>[],
+    liveSourceCount: getConfiguredSourcesCount(),
+    liveSources: getLiveCapableSources(),
+  };
 }
 
 export async function scanAllPrices() {

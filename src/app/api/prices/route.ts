@@ -3,8 +3,11 @@ import {
   getAllProducts,
   getProductsByCategory,
   getPrices,
+  getMergedPrices,
+  getMergedAllPrices,
   getPrice,
   scanAllPrices,
+  getLiveSourcesInfo,
 } from "@/lib/db-adapter";
 import { PRICE_SOURCES } from "@/lib/types";
 
@@ -29,36 +32,35 @@ export async function GET(req: NextRequest) {
     }
 
     if (sku) {
-      const prices = await getPrices(sku);
-      const product = (await getAllProducts()).find(
-        (p: Record<string, unknown>) => p.sku === sku
-      );
+      const [prices, product] = await Promise.all([
+        getMergedPrices(sku),
+        getAllProducts().then(products => products.find(
+          (p: Record<string, unknown>) => p.sku === sku
+        )),
+      ]);
       return NextResponse.json({ product, prices });
     }
 
     if (type === "all") {
-      const allPrices = await scanAllPrices();
-      const products = await getAllProducts();
-
-      // Group by product
-      const grouped: Record<string, { product: Record<string, unknown>; prices: Record<string, unknown>[] }> = {};
-      for (const p of allPrices) {
-        const key = String(p.sku || "");
-        if (!grouped[key]) {
-          grouped[key] = { product: {}, prices: [] };
-          const prod = products.find((pr) => String(pr.sku) === key);
-          if (prod) grouped[key].product = prod;
-        }
-        grouped[key].prices.push(p);
-      }
-
+      const result = await getMergedAllPrices();
       return NextResponse.json({
-        products: Object.values(grouped),
-        sources: PRICE_SOURCES,
+        products: result.products,
+        sources: result.sources,
+        liveSourceCount: result.liveSourceCount,
+        liveSources: result.liveSources,
       });
     }
 
-    return NextResponse.json({ prices: await scanAllPrices(), sources: PRICE_SOURCES });
+    const [allPrices, liveInfo] = await Promise.all([
+      scanAllPrices(),
+      getLiveSourcesInfo(),
+    ]);
+    return NextResponse.json({ 
+      prices: allPrices, 
+      sources: PRICE_SOURCES,
+      liveSourceCount: liveInfo.count,
+      liveSources: liveInfo.sources,
+    });
   } catch (err) {
     console.error("API Error:", err);
     return NextResponse.json(

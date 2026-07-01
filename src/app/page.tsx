@@ -31,6 +31,8 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("name");
   const [error, setError] = useState<string | null>(null);
+  const [liveSourceCount, setLiveSourceCount] = useState(0);
+  const [liveSources, setLiveSources] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -41,6 +43,8 @@ export default function Home() {
       const data = await res.json();
       setProducts(data.products || []);
       setSources(data.sources || []);
+      setLiveSourceCount(data.liveSourceCount || 0);
+      setLiveSources(data.liveSources || []);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -215,6 +219,18 @@ export default function Home() {
               : "—"}
           </p>
         </div>
+        {liveSourceCount > 0 && (
+          <div className="rounded-xl border border-accent/30 bg-accent/5 p-3">
+            <p className="text-xs text-muted font-medium flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+              </span>
+              Live Sources
+            </p>
+            <p className="text-xl font-bold mt-0.5 text-accent">{liveSourceCount}</p>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -307,12 +323,23 @@ export default function Home() {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted">Price range</span>
-                      {prices.length > 1 && (
-                        <span className="flex items-center gap-1 font-medium text-accent">
-                          <TrendingDown className="h-3 w-3" />
-                          Save {savings.toFixed(0)}%
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {prices.some(p => p.live === true) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent" />
+                            </span>
+                            Live
+                          </span>
+                        )}
+                        {prices.length > 1 && (
+                          <span className="flex items-center gap-1 font-medium text-accent">
+                            <TrendingDown className="h-3 w-3" />
+                            Save {savings.toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {lowest !== null && (
                       <div className="flex items-baseline gap-1.5">
@@ -341,21 +368,36 @@ export default function Home() {
                     All sources ({prices.length})
                   </summary>
                   <div className="px-4 pb-3 space-y-1">
-                    {(prices as { source: string; pricePerUnit: number; currency: string }[])
-                      .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
+                    {(prices as Record<string, unknown>[])
+                      .sort((a, b) => (a.pricePerUnit as number) - (b.pricePerUnit as number))
                       .map((p) => {
-                        const info = getSourceInfo(p.source);
+                        const info = getSourceInfo(p.source as string);
                         const icon = info?.icon || "";
                         const isCheapest = p.pricePerUnit === lowest;
+                        const isLive = p.live === true;
                         return (
                           <div
-                            key={p.source}
+                            key={p.source as string}
                             className={`flex items-center justify-between rounded-md px-2 py-1 text-xs ${
-                              isCheapest ? "bg-accent/10 text-accent font-medium" : "text-muted"
+                              isCheapest && isLive ? "bg-accent/15 text-accent font-medium" :
+                              isCheapest ? "bg-accent/10 text-accent font-medium" :
+                              isLive ? "bg-accent/5" :
+                              "text-muted"
                             }`}
                           >
-                            <span>{icon} {p.source}</span>
-                            <span className="font-mono">{p.currency} ${p.pricePerUnit.toFixed(2)}</span>
+                            <span className="flex items-center gap-1.5">
+                              {icon} {p.source as string}
+                              {isLive && (
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-accent/15 px-1 py-0.5 text-[9px] font-medium text-accent uppercase tracking-wider">
+                                  <span className="relative flex h-1 w-1">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-1 w-1 bg-accent" />
+                                  </span>
+                                  Live
+                                </span>
+                              )}
+                            </span>
+                            <span className="font-mono">{p.currency as string} ${(p.pricePerUnit as number).toFixed(2)}</span>
                           </div>
                         );
                       })}
