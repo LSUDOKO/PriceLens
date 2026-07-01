@@ -86,9 +86,45 @@ export default function HeatmapPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted">Loading price comparison data...</p>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-8 w-48 rounded-lg bg-secondary animate-pulse" />
+          <div className="h-4 w-80 rounded-lg bg-secondary animate-pulse" />
+        </div>
+        {/* Summary cards skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card p-3">
+              <div className="h-3 w-24 rounded bg-secondary animate-pulse mb-2" />
+              <div className="h-7 w-28 rounded bg-secondary animate-pulse" />
+            </div>
+          ))}
+        </div>
+        {/* Source cards skeleton */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-secondary animate-pulse" />
+                <div className="space-y-1 flex-1">
+                  <div className="h-4 w-24 rounded bg-secondary animate-pulse" />
+                  <div className="h-3 w-32 rounded bg-secondary animate-pulse" />
+                </div>
+              </div>
+              <div className="h-7 w-20 rounded bg-secondary animate-pulse" />
+              <div className="h-2 w-full rounded-full bg-secondary animate-pulse" />
+              <div className="flex justify-between">
+                <div className="h-3 w-16 rounded bg-secondary animate-pulse" />
+                <div className="h-3 w-20 rounded bg-secondary animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-center gap-2 py-4">
+          <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+          <p className="text-xs text-muted">Loading price comparison data...</p>
+        </div>
       </div>
     );
   }

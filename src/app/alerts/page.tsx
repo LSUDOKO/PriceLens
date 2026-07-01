@@ -11,6 +11,9 @@ interface Alert {
   targetPrice: number;
   createdAt: number;
   productName: string;
+  triggered?: boolean;
+  currentLowest?: number | null;
+  currentCheapestSource?: string | null;
 }
 
 export default function AlertsPage() {
@@ -20,7 +23,7 @@ export default function AlertsPage() {
   const [showForm, setShowForm] = useState(false);
   const [skuSearch, setSkuSearch] = useState("");
   const [skuSuggestions, setSkuSuggestions] = useState<{ sku: string; name: string }[]>([]);
-  const [formData, setFormData] = useState({ sku: "", targetPrice: "", region: "*" });
+  const [formData, setFormData] = useState({ sku: "", targetPrice: "", source: "*" });
   const [creating, setCreating] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -64,12 +67,12 @@ export default function AlertsPage() {
         body: JSON.stringify({
           sku: formData.sku,
           targetPrice: parseFloat(formData.targetPrice),
-          region: formData.region,
+          source: formData.source,
         }),
       });
       if (!res.ok) throw new Error("Failed to create alert");
       setSuccessMsg(`Alert created for ${formData.sku}!`);
-      setFormData({ sku: "", targetPrice: "", region: "*" });
+      setFormData({ sku: "", targetPrice: "", source: "*" });
       setShowForm(false);
       setSkuSuggestions([]);
       setTimeout(() => setSuccessMsg(""), 3000);
@@ -98,9 +101,34 @@ export default function AlertsPage() {
 
   if (loading && alerts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted">Loading alerts...</p>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-40 rounded-lg bg-secondary animate-pulse" />
+            <div className="h-4 w-72 rounded-lg bg-secondary animate-pulse" />
+          </div>
+          <div className="h-10 w-28 rounded-xl bg-secondary animate-pulse" />
+        </div>
+        {/* Alert cards skeleton */}
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-lg bg-secondary animate-pulse" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-48 rounded bg-secondary animate-pulse" />
+                  <div className="h-3 w-24 rounded bg-secondary animate-pulse" />
+                  <div className="flex gap-2 mt-2">
+                    <div className="h-5 w-16 rounded-full bg-secondary animate-pulse" />
+                    <div className="h-5 w-20 rounded-full bg-secondary animate-pulse" />
+                    <div className="h-5 w-24 rounded-full bg-secondary animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -191,12 +219,12 @@ export default function AlertsPage() {
             <div>
               <label className="block text-xs font-medium text-muted mb-1">Source</label>
               <select
-                value={formData.region}
-                onChange={(e) => setFormData(f => ({ ...f, region: e.target.value }))}
+                value={formData.source}
+                onChange={(e) => setFormData(f => ({ ...f, source: e.target.value }))}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary transition-colors"
               >
-                {sources.map(r => (
-                  <option key={r} value={r}>{r === "*" ? "All Sources" : r}</option>
+                {sources.map(s => (
+                  <option key={s} value={s}>{s === "*" ? "All Sources" : s}</option>
                 ))}
               </select>
             </div>
@@ -254,6 +282,11 @@ export default function AlertsPage() {
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted">
                         {alert.targetSource === "*" ? "🌍 All sources" : `📍 ${alert.targetSource}`}
+                      {alert.triggered && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
+                          ⚡ Triggered — ${alert.currentLowest?.toFixed(2)}
+                        </span>
+                      )}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted">
                         🕐 {new Date(alert.createdAt).toLocaleDateString()}

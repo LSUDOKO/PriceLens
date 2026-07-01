@@ -33,7 +33,7 @@ npm run dev
 
 #### Step 3: Open the Web Dashboard
 
-Open **http://localhost:3000** in your browser.
+Open **http://localhost:3456** in your browser.
 
 **Test these features:**
 - [ ] **Price Explorer** (`/`) — Search "MacBook", filter by category, expand products to see source prices
@@ -44,27 +44,27 @@ Open **http://localhost:3000** in your browser.
 
 ```bash
 # Health check
-curl http://localhost:3000/api/health
+curl http://localhost:3456/api/health
 
 # Seed data
-curl -X POST http://localhost:3000/api/seed
+curl -X POST http://localhost:3456/api/seed
 
 # List all products and prices
-curl http://localhost:3000/api/prices?type=all
+curl http://localhost:3456/api/prices?type=all
 
 # Query a specific product
-curl "http://localhost:3000/api/prices?sku=macbook-pro-m4"
+curl "http://localhost:3456/api/prices?sku=macbook-pro-m4"
 
 # Create a price alert
-curl -X POST http://localhost:3000/api/alerts \
+curl -X POST http://localhost:3456/api/alerts \
   -H "Content-Type: application/json" \
   -d '{"sku":"macbook-pro-m4","targetPrice":2500,"region":"*"}'
 
 # List alerts
-curl "http://localhost:3000/api/alerts?userId=default-user"
+curl "http://localhost:3456/api/alerts?userId=default-user"
 
 # Delete an alert
-curl -X DELETE http://localhost:3000/api/alerts \
+curl -X DELETE http://localhost:3456/api/alerts \
   -H "Content-Type: application/json" \
   -d '{"alertId":"<alert-id-from-list>"}'
 ```
@@ -188,7 +188,7 @@ Try these prompts:
 
 ### 🏗️ Architecture Verification
 
-Open **http://localhost:3000/architecture.html** to view the interactive architecture diagram showing:
+Open **http://localhost:3456/architecture.html** to view the interactive architecture diagram showing:
 - **Client Layer** — Claude Desktop, Web Browser, Cursor/Cline
 - **MCP Server Layer** — 9 tools + 3 resources via JSON-RPC 2.0 over stdio
 - **API Layer** — Next.js 16.2 REST endpoints on Vercel

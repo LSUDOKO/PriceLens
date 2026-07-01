@@ -4,26 +4,55 @@ import {
   putAlert,
   deleteAlert,
   getAllProducts,
+  getPrices,
 } from "@/lib/db-adapter";
 import { v4 as uuidv4 } from "uuid";
 
+// Enrich alerts with product names and current price status
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const userId = url.searchParams.get("userId") || "default-user";
     const alerts = await getAlertsByUser(userId);
 
-    // Enrich alerts with product names
+    // Enrich alerts with product names + current price comparison
     const allProducts = await getAllProducts();
-    const enriched = alerts.map((alert: Record<string, unknown>) => {
+    const enriched = await Promise.all(alerts.map(async (alert: Record<string, unknown>) => {
       const product = allProducts.find(
         (p: Record<string, unknown>) => p.sku === alert.sku
       );
+
+      // Check current prices vs alert target
+      let currentLowest: number | null = null;
+      let triggered = false;
+      let currentCheapestSource: string | null = null;
+
+      const prices = await getPrices(alert.sku as string);
+      if (prices.length > 0) {
+        const targetSource = alert.targetSource as string;
+        const filtered = targetSource === "*"
+          ? prices
+          : prices.filter((p: Record<string, unknown>) => p.source === targetSource);
+
+        if (filtered.length > 0) {
+          const sorted = [...filtered].sort(
+            (a: Record<string, unknown>, b: Record<string, unknown>) =>
+              (a.pricePerUnit as number) - (b.pricePerUnit as number)
+          );
+          currentLowest = sorted[0].pricePerUnit as number;
+          currentCheapestSource = sorted[0].source as string;
+          triggered = currentLowest <= (alert.targetPrice as number);
+        }
+      }
+
       return {
         ...alert,
         productName: (product?.name as string) || (alert.sku as string),
+        currentLowest,
+        currentCheapestSource,
+        triggered,
       };
-    });
+    }));
 
     return NextResponse.json({ alerts: enriched });
   } catch (err) {
@@ -38,7 +67,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sku, targetPrice, region } = body;
+    const { sku, targetPrice, source } = body;
 
     if (!sku) {
       return NextResponse.json(
@@ -61,7 +90,7 @@ export async function POST(req: NextRequest) {
       userId: "default-user",
       alertId,
       sku,
-      targetSource: region || "*",
+      targetSource: source || "*",
       targetPrice: price,
       createdAt: Date.now(),
     });
@@ -77,7 +106,7 @@ export async function POST(req: NextRequest) {
       alert: {
         alertId,
         sku,
-        targetSource: region || "*",
+        targetSource: source || "*",
         targetPrice: price,
         productName: (product?.name as string) || sku,
       },

@@ -140,10 +140,10 @@ cp .env.example .env.local
 
 ```bash
 # Seeds 14 products across 14 sources
-curl -X POST http://localhost:3000/api/seed
+curl -X POST http://localhost:3456/api/seed
 
 # Or force re-seed:
-curl -X POST "http://localhost:3000/api/seed?force=true"
+curl -X POST "http://localhost:3456/api/seed?force=true"
 ```
 
 ### 4. Start
@@ -151,7 +151,7 @@ curl -X POST "http://localhost:3000/api/seed?force=true"
 ```bash
 # Start the web dashboard
 npm run dev
-# → http://localhost:3000
+# → http://localhost:3456
 
 # Or start the MCP server (for Claude Desktop, Cursor, etc.)
 npm run mcp

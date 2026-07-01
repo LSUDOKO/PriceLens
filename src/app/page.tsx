@@ -106,9 +106,56 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted">Loading pricing data...</p>
+      <div className="space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-8 w-48 rounded-lg bg-secondary animate-pulse" />
+          <div className="h-4 w-96 rounded-lg bg-secondary animate-pulse" />
+        </div>
+        {/* Stats skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card p-3">
+              <div className="h-3 w-16 rounded bg-secondary animate-pulse mb-2" />
+              <div className="h-7 w-12 rounded bg-secondary animate-pulse" />
+            </div>
+          ))}
+        </div>
+        {/* Filter skeleton */}
+        <div className="flex gap-3">
+          <div className="h-10 flex-1 rounded-xl bg-secondary animate-pulse" />
+          <div className="h-10 w-36 rounded-xl bg-secondary animate-pulse" />
+          <div className="h-10 w-28 rounded-xl bg-secondary animate-pulse" />
+          <div className="h-10 w-10 rounded-xl bg-secondary animate-pulse" />
+        </div>
+        {/* Cards skeleton */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-3">
+              <div className="flex justify-between">
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-4 w-36 rounded bg-secondary animate-pulse" />
+                  <div className="h-3 w-20 rounded bg-secondary animate-pulse" />
+                </div>
+                <div className="h-5 w-20 rounded-full bg-secondary animate-pulse" />
+              </div>
+              <div className="flex gap-1.5">
+                <div className="h-4 w-16 rounded bg-secondary animate-pulse" />
+                <div className="h-4 w-20 rounded bg-secondary animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <div className="h-3 w-24 rounded bg-secondary animate-pulse" />
+                <div className="h-6 w-32 rounded bg-secondary animate-pulse" />
+              </div>
+              <div className="h-8 w-full rounded-lg bg-secondary animate-pulse" />
+            </div>
+          ))}
+        </div>
+        {/* Loading indicator */}
+        <div className="flex items-center justify-center gap-2 py-4">
+          <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+          <p className="text-xs text-muted">Loading pricing data...</p>
+        </div>
       </div>
     );
   }
@@ -130,7 +177,7 @@ export default function Home() {
           <RefreshCw className="h-4 w-4" /> Retry
         </button>
         <p className="text-xs text-muted mt-4">
-          Tip: Run <code className="rounded bg-secondary px-1.5 py-0.5 font-mono">curl -X POST http://localhost:3000/api/seed</code> to seed data
+          Tip: Run <code className="rounded bg-secondary px-1.5 py-0.5 font-mono">curl -X POST http://localhost:3456/api/seed</code> to seed data
         </p>
       </div>
     );
